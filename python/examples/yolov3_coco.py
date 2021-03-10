@@ -86,14 +86,15 @@ class_names = ["person",
     "hair drier",
     "toothbrush"]
 
-image = cv2.imread(r'C:\Users\DY\Cache\cv_test_video\WIN_6.mp4_20210307_162930.998.png', 1)
-#image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-#image_resized = cv2.resize(image, (416, 416), interpolation=cv2.INTER_LINEAR)
-data = ncnn.Mat.from_pixels_resize(image.data, ncnn.Mat.PixelType.PIXEL_BGR, 1280, 720, 416, 416)
+image = cv2.imread(r'C:\Users\DY\Cache\cv_test_video\d5.png', 1)
+image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+image_resized = cv2.resize(image_rgb, (416, 416), interpolation=cv2.INTER_LINEAR)
+data = ncnn.Mat.from_pixels(image_resized.data, ncnn.Mat.PixelType.PIXEL_RGB, 416, 416)
+#data = ncnn.Mat.from_pixels_resize(image.data, ncnn.Mat.PixelType.PIXEL_BGR2RGB, 1280, 720, 416, 416)
 data.substract_mean_normalize([0.0,0.0,0.0],[1/255.0,1/255.0,1/255.0])
 
 net = ncnn.Net()
-net.opt.use_vulkan_compute = True
+net.opt.use_vulkan_compute = False
 ret = net.load_param(r'C:\Users\DY\Cache\ncnn\yolov3.param')
 if ret != 0:
     print('Failed to load param file')
@@ -102,17 +103,17 @@ ret = net.load_model(r'C:\Users\DY\Cache\ncnn\yolov3.bin')
 if ret != 0:
     print('Failed to load bin file.')
 
+start = time.time()
 ex = net.create_extractor()
-
 ret = ex.input('data', data)
 if ret != 0:
     print('Failed to run input.')
-
 ret, out = ex.extract('output')
+print(f'inference time: {time.time() - start}s')
 
 for i in range(0, out.h*6, 6):
     print(f'class: {class_names[int(out[i])-1]}, prob: {out[i+1]}')
-    
+
 def parser():
     parser = argparse.ArgumentParser(description="YOLOv3 Object Detection")
     parser.add_argument("--input", type=str, default="",

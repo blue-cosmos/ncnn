@@ -32,7 +32,7 @@ static int detect_yolov3(const char * paramFile, const char * binFile, const cv:
 {
     ncnn::Net yolov3;
 
-    yolov3.opt.use_vulkan_compute = true;
+    yolov3.opt.use_vulkan_compute = false;
 
     // original pretrained model from https://github.com/eric612/MobileNet-YOLO
     // param : https://drive.google.com/open?id=1V9oKHP6G6XvXZqhZbzNKL6FI_clRWdC-
@@ -49,7 +49,7 @@ static int detect_yolov3(const char * paramFile, const char * binFile, const cv:
     int img_w = bgr.cols;
     int img_h = bgr.rows;
 
-    ncnn::Mat in = ncnn::Mat::from_pixels_resize(bgr.data, ncnn::Mat::PIXEL_BGR, bgr.cols, bgr.rows, target_size, target_size);
+    ncnn::Mat in = ncnn::Mat::from_pixels_resize(bgr.data, ncnn::Mat::PIXEL_BGR2RGB, bgr.cols, bgr.rows, target_size, target_size);
 
     /*const float mean_vals[3] = {127.5f, 127.5f, 127.5f};
     const float norm_vals[3] = {0.007843f, 0.007843f, 0.007843f};*/
@@ -58,36 +58,35 @@ static int detect_yolov3(const char * paramFile, const char * binFile, const cv:
     in.substract_mean_normalize(mean_vals, norm_vals);
 
     double start = ncnn::get_current_time();
-    for (int c = 0; c < 20; ++c) {
 
-        ncnn::Extractor ex = yolov3.create_extractor();
+    ncnn::Extractor ex = yolov3.create_extractor();
 
-        int r = ex.input("data", in);
+    int r = ex.input("data", in);
 
-        ncnn::Mat out;
-        ex.extract("output", out);
+    ncnn::Mat out;
+    ex.extract("output", out);
 
-        printf("out w/h/c: %d %d %d\n", out.w, out.h, out.c);
-        objects.clear();
-        for (int i = 0; i < out.h; i++)
-        {
-            const float* values = out.row(i);
+    printf("out w/h/c: %d %d %d\n", out.w, out.h, out.c);
+    objects.clear();
+    for (int i = 0; i < out.h; i++)
+    {
+        const float* values = out.row(i);
 
-            Object object;
-            object.label = values[0];
-            object.prob = values[1];
-            object.rect.x = values[2] * img_w;
-            object.rect.y = values[3] * img_h;
-            object.rect.width = values[4] * img_w - object.rect.x;
-            object.rect.height = values[5] * img_h - object.rect.y;
-            printf("label: %f, prob: %f\n", values[0], values[1]);
+        Object object;
+        object.label = values[0];
+        object.prob = values[1];
+        object.rect.x = values[2] * img_w;
+        object.rect.y = values[3] * img_h;
+        object.rect.width = values[4] * img_w - object.rect.x;
+        object.rect.height = values[5] * img_h - object.rect.y;
+        printf("label: %f, prob: %f\n", values[0], values[1]);
 
-            objects.push_back(object);
-        }
+        objects.push_back(object);
     }
+
     double end = ncnn::get_current_time();
     double time = end - start;
-    printf("Average inference time:%7.2f \n", time/20);
+    printf("inference time:%7.2f \n", time);
 
     return 0;
 }
